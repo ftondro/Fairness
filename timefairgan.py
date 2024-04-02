@@ -163,10 +163,10 @@ def timegan (ori_data, parameters):
     G = X_hat[:, parameters['S_start_index']:parameters['S_start_index'] + 2]
     I = X_hat[:, parameters['Y_start_index']:parameters['Y_start_index'] + 2]
     G_fake = -1.0 * parameters['lamda_val'] * (
-            tf.reduce_mean(G[:, parameters['underpriv_index']] * I[:, parameters['desire_index']]) / 
-            tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['underpriv_index']]) - 
-            tf.reduce_mean(G[:, parameters['priv_index']] * I[:, parameters['desire_index']]) / 
-            tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['priv_index']])
+            tf.reduce_mean(G[:, parameters['underpriv_index']:] * I[:, parameters['desire_index']:]) / 
+            tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['underpriv_index']:]) - 
+            tf.reduce_mean(G[:, parameters['priv_index']:] * I[:, parameters['desire_index']:]) / 
+            tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['priv_index']:])
         )
     # G_e = E_hat[:, parameters['S_start_index']:parameters['S_start_index'] + 2]
     # I_e = E_hat[:, parameters['Y_start_index']:parameters['Y_start_index'] + 2]
