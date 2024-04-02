@@ -1,3 +1,3 @@
-python main_timegan.py no_fairness --data_name stock --seq_len 24 --module gru --hidden_dim 24 --num_layer 3 --iteration 50000 --batch_size 128 --metric_iteration 10
+python main_timegan.py  no_fairness --df_name vital --num_epochs 10 --batch_size 128 --seq_len 24 --module gru --hidden_dim 24 --num_layer 3 --iteration 1000 --metric_iteration 10 --fake_name synthetic_data_no_fairness --size_of_fake_data 50000
 
-python main_timegan.py  with_fairness --df_name vital --num_epochs 10 --batch_size 10 --seq_len 12 --module gru --hidden_dim 24 --num_layer 3 --iteration 1000 --S Gender --Y Mortality --underprivileged_value Female --desirable_value No --lamda_val 0.5 --metric_iteration 10 --fake_name synthetic_data --size_of_fake_data 50000
+python main_timegan.py  with_fairness --df_name vital --num_epochs 10 --batch_size 10 --seq_len 12 --module gru --hidden_dim 24 --num_layer 3 --iteration 1000 --S Gender --Y Mortality --underprivileged_value Female --desirable_value No --lamda_val 0.5 --metric_iteration 10 --fake_name synthetic_data_with_fairness --size_of_fake_data 50000
