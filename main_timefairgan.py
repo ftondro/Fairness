@@ -56,25 +56,19 @@ def main (args):
 
   generated_data = timegan(ori_data, parameters)   
   print('Finish Synthetic Data Generation')
-  synthetic_data_reverse = []
-  for row in generated_data:
-      for batch in row:
-          synthetic_data_reverse.append(list(batch))
-  synthetic_data = synthetic_data_reverse[::-1]
-  fake_data = get_original_data(synthetic_data, df, ohe, scaler)
   ## Performance metrics   
   # Output initialization
   metric_results = dict()
   # 1. Discriminative Score
   discriminative_score = list()
   for _ in range(args.metric_iteration):
-    temp_disc = discriminative_score_metrics(df, fake_data)
+    temp_disc = discriminative_score_metrics(ori_data, generated_data)
     discriminative_score.append(temp_disc)  
   metric_results['discriminative'] = np.mean(discriminative_score)    
   # 2. Predictive score
   predictive_score = list()
   for tt in range(args.metric_iteration):
-    temp_pred = predictive_score_metrics(df, fake_data)
+    temp_pred = predictive_score_metrics(ori_data, generated_data)
     predictive_score.append(temp_pred)       
   metric_results['predictive'] = np.mean(predictive_score)            
   # 3. Visualization (PCA and tSNE)
@@ -82,6 +76,12 @@ def main (args):
   visualization(ori_data, generated_data, 'tsne')
   ## Print discriminative and predictive scores
   print(metric_results)
+  synthetic_data_reverse = []
+  for row in generated_data:
+      for batch in row:
+          synthetic_data_reverse.append(list(batch))
+  synthetic_data = synthetic_data_reverse[::-1]
+  fake_data = get_original_data(synthetic_data, df, ohe, scaler)
   return df , fake_data , metric_results
 
 
