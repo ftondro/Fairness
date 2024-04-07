@@ -2,6 +2,8 @@
 import tensorflow as tf
 import numpy as np
 from utils import extract_time, rnn_cell, random_generator, batch_generator
+import warnings
+warnings.filterwarnings("ignore")
 
 def timegan (ori_data, parameters):
   # Initialization on the Graph
@@ -124,7 +126,7 @@ def timegan (ori_data, parameters):
     
   # Synthetic data
   X_hat = recovery(H_hat, T)
-  
+
   # Discriminator
   Y_fake = discriminator(H_hat, T)
   Y_real = discriminator(H, T)     
@@ -158,28 +160,34 @@ def timegan (ori_data, parameters):
   G_loss_V = G_loss_V1 + G_loss_V2
 
   # 4. Fainess loss
-  G_fairness = 0
-  if parameters['command'] ==  'with_fairness':
-    G = X_hat[:, parameters['S_start_index']:parameters['S_start_index'] + 2]
-    I = X_hat[:, parameters['Y_start_index']:parameters['Y_start_index'] + 2]
-    G_fake = -1.0 * parameters['lamda_val'] * (
-            tf.reduce_mean(G[:, parameters['underpriv_index']:] * I[:, parameters['desire_index']:]) / 
-            tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['underpriv_index']:]) - 
-            tf.reduce_mean(G[:, parameters['priv_index']:] * I[:, parameters['desire_index']:]) / 
-            tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['priv_index']:])
-        )
-    # G_e = E_hat[:, parameters['S_start_index']:parameters['S_start_index'] + 2]
-    # I_e = E_hat[:, parameters['Y_start_index']:parameters['Y_start_index'] + 2]
-    # G_fake_e = -1.0 * parameters['lamda_val'] * (
-    #         tf.reduce_mean(G_e[:, parameters['underpriv_index']] * I_e[:, parameters['desire_index']]) / 
-    #         tf.reduce_sum(E_hat[:, parameters['S_start_index'] + parameters['underpriv_index']]) - 
-    #         tf.reduce_mean(G_e[:, parameters['priv_index']] * I_e[:, parameters['desire_index']]) / 
-    #         tf.reduce_sum(E_hat[:, parameters['S_start_index'] + parameters['priv_index']])
-    #     )
-    G_fairness = G_fake #+ G_fake_e
+  # G_loss_fairness = 0
+  # if parameters['command'] ==  'with_fairness':
+  #   G = X_hat[:, parameters['S_start_index']:parameters['S_start_index'] + 2,:]
+  #   I = X_hat[:, parameters['Y_start_index']:parameters['Y_start_index'] + 2,:]
+  #   G_loss_fairness = -1.0 * parameters['lamda_val'] * (
+  #           tf.reduce_sum(G[:,parameters['underpriv_index'],:] * I[:, parameters['desire_index'],:]) / 
+  #           tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['underpriv_index'],:])- 
+  #           tf.reduce_sum(G[:, parameters['priv_index'],:] * I[:, parameters['desire_index'],:]) / 
+  #           tf.reduce_sum(X_hat[:, parameters['S_start_index'] + parameters['priv_index'],:])
+  #       )
+  epsilon = 1e-7  # Small value to ensure safe division
+
+  G_loss_fairness = 0
+  if parameters['command'] == 'with_fairness':
+    G_underpriv = X_hat[:, parameters['S_start_index'] + parameters['underpriv_index'], :]
+    G_priv = X_hat[:, parameters['S_start_index'] + parameters['priv_index'], :]
+    I_desire = X_hat[:, parameters['Y_start_index'] + parameters['desire_index'], :]
+    numerator_underpriv = tf.reduce_sum(G_underpriv * I_desire, axis=1)
+    denominator_underpriv = tf.reduce_sum(G_underpriv, axis=1) + epsilon
+    numerator_priv = tf.reduce_sum(G_priv * I_desire, axis=1)
+    denominator_priv = tf.reduce_sum(G_priv, axis=1) + epsilon
+    loss_underpriv = numerator_underpriv / denominator_underpriv
+    loss_priv = numerator_priv / denominator_priv
+    G_loss_fairness = -1.0 * parameters['lamda_val'] * (tf.reduce_mean(loss_underpriv) - tf.reduce_mean(loss_priv))
+
 
   # 5. Summation
-  G_loss = G_loss_U + gamma * G_loss_U_e + 100 * tf.sqrt(G_loss_S) + 100*G_loss_V + G_fairness
+  G_loss = G_loss_U + gamma * G_loss_U_e + 100 * tf.sqrt(G_loss_S) + 100*G_loss_V + G_loss_fairness
             
   # Embedder network loss
   E_loss_T0 = tf.losses.mean_squared_error(X, X_tilde)
@@ -190,7 +198,7 @@ def timegan (ori_data, parameters):
   E0_solver = tf.train.AdamOptimizer().minimize(E_loss0, var_list = e_vars + r_vars)
   E_solver = tf.train.AdamOptimizer().minimize(E_loss, var_list = e_vars + r_vars)
   D_solver = tf.train.AdamOptimizer().minimize(D_loss, var_list = d_vars)
-  G_solver = tf.train.AdamOptimizer().minimize(G_loss, var_list = g_vars + s_vars)      
+  G_solver = tf.train.AdamOptimizer().minimize(G_loss, var_list = g_vars + s_vars + r_vars)      
   GS_solver = tf.train.AdamOptimizer().minimize(G_loss_S, var_list = g_vars + s_vars)   
         
   ## TimeGAN training   
@@ -238,7 +246,7 @@ def timegan (ori_data, parameters):
       # Random vector generation
       Z_mb = random_generator(batch_size, z_dim, T_mb, max_seq_len)
       # Train generator
-      _, step_g_loss_u, step_g_loss_s, step_g_loss_v = sess.run([G_solver, G_loss_U, G_loss_S, G_loss_V], feed_dict={Z: Z_mb, X: X_mb, T: T_mb})
+      _, step_g_loss_u, step_g_loss_u_e, step_g_loss_s, step_g_loss_v, step_G_loss_fairness =  sess.run([G_solver, G_loss_U, G_loss_U_e, G_loss_S, G_loss_V, G_loss_fairness], feed_dict={Z: Z_mb, X: X_mb, T: T_mb})
        # Train embedder        
       _, step_e_loss_t0 = sess.run([E_solver, E_loss_T0], feed_dict={Z: Z_mb, X: X_mb, T: T_mb})   
            
@@ -257,9 +265,11 @@ def timegan (ori_data, parameters):
     if itt % 1000 == 0:
       print('step: '+ str(itt) + '/' + str(iterations) + 
             ', d_loss: ' + str(np.round(step_d_loss,4)) + 
-            ', g_loss_u: ' + str(np.round(step_g_loss_u,4)) + 
+            ', g_loss_u: ' + str(np.round(step_g_loss_u,4)) +
+            ', step_g_loss_u_e: ' + str(np.round(step_g_loss_u_e,4)) +
             ', g_loss_s: ' + str(np.round(np.sqrt(step_g_loss_s),4)) + 
-            ', g_loss_v: ' + str(np.round(step_g_loss_v,4)) + 
+            ', g_loss_v: ' + str(np.round(step_g_loss_v,4)) +
+            ', g_loss_fairness: ' + str(np.round(step_G_loss_fairness,4)) +
             ', e_loss_t0: ' + str(np.round(np.sqrt(step_e_loss_t0),4))  )
   print('Finish Joint Training')
     
