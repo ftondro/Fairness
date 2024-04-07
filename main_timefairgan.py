@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # 1. TimeGAN model
-from timefairgan import timegan
+from timegan import timegan
 # 2. Data loading
 from data_loading import real_data_loading, sine_data_generation, get_original_data
 # 3. Metrics
@@ -29,9 +29,13 @@ def main (args):
     # Set number of samples and its dimensions
     no, dim = 10000, 5
     ori_data = sine_data_generation(no, args.seq_len, dim)
-    
+  print(f'S_start_index = {S_start_index}\n')
+  print(f'Y_start_index = {Y_start_index}\n') 
+  print(f'underpriv_index = {underpriv_index}\n')
+  print(f'priv_index = {priv_index}\n')
+  print(f'undesire_index = {undesire_index}\n')
+  print(f'desire_index = {desire_index}\n')   
   print(args.df_name + ' dataset is ready.')
-    
   ## Synthetic data generation by TimeGAN
   # Set newtork parameters
   parameters = dict()
@@ -56,7 +60,15 @@ def main (args):
 
   generated_data = timegan(ori_data, parameters)   
   print('Finish Synthetic Data Generation')
-  ## Performance metrics   
+  synthetic_data_reverse = []
+  for row in generated_data:
+      for batch in row:
+          synthetic_data_reverse.append(list(batch))
+  synthetic_data = synthetic_data_reverse[::-1]
+  fake_data = get_original_data(synthetic_data, df, ohe, scaler)
+  fake_data = fake_data[df.columns]
+  fake_data.to_csv('TimeFairGAN' + args.fake_name + '.csv', index = False)
+  # Performance metrics   
   # Output initialization
   metric_results = dict()
   # 1. Discriminative Score
@@ -74,19 +86,11 @@ def main (args):
   # 3. Visualization (PCA and tSNE)
   visualization(ori_data, generated_data, 'pca')
   visualization(ori_data, generated_data, 'tsne')
-  ## Print discriminative and predictive scores
+  # Print discriminative and predictive scores
   print(metric_results)
-  synthetic_data_reverse = []
-  for row in generated_data:
-      for batch in row:
-          synthetic_data_reverse.append(list(batch))
-  synthetic_data = synthetic_data_reverse[::-1]
-  fake_data = get_original_data(synthetic_data, df, ohe, scaler)
-  return df , fake_data , metric_results
+  return df, fake_data, metric_results
 
-
-if __name__ == '__main__':  
-  
+if __name__ == '__main__':   
   # Inputs for the main function
   parser = argparse.ArgumentParser(description="Script Description")
   subparser = parser.add_subparsers(dest='command')
@@ -123,7 +127,5 @@ if __name__ == '__main__':
   no_fairness.add_argument('--size_of_fake_data', type=int, help='How many data records to generate')
 
   args = parser.parse_args()
-  # Calls main function  
   ori_data, generated_data, metrics = main(args)
-  generated_data.to_csv('TimeFairGAN' + args.fake_name + '.csv', index = False)
   
