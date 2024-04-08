@@ -3,7 +3,8 @@ from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import numpy as np
-
+import warnings
+warnings.filterwarnings("ignore")
    
 def visualization (ori_data, generated_data, analysis):
   """Using PCA or tSNE for generated and original data visualization.
