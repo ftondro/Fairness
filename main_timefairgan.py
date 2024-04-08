@@ -29,12 +29,7 @@ def main (args):
     # Set number of samples and its dimensions
     no, dim = 10000, 5
     ori_data = sine_data_generation(no, args.seq_len, dim)
-  print(f'S_start_index = {S_start_index}\n')
-  print(f'Y_start_index = {Y_start_index}\n') 
-  print(f'underpriv_index = {underpriv_index}\n')
-  print(f'priv_index = {priv_index}\n')
-  print(f'undesire_index = {undesire_index}\n')
-  print(f'desire_index = {desire_index}\n')   
+ 
   print(args.df_name + ' dataset is ready.')
   ## Synthetic data generation by TimeGAN
   # Set newtork parameters
@@ -82,12 +77,13 @@ def main (args):
   for tt in range(args.metric_iteration):
     temp_pred = predictive_score_metrics(ori_data, generated_data)
     predictive_score.append(temp_pred)       
-  metric_results['predictive'] = np.mean(predictive_score)            
+  metric_results['predictive'] = np.mean(predictive_score) 
+  # Print discriminative and predictive scores
+  print(metric_results)           
   # 3. Visualization (PCA and tSNE)
   visualization(ori_data, generated_data, 'pca')
   visualization(ori_data, generated_data, 'tsne')
-  # Print discriminative and predictive scores
-  print(metric_results)
+  
   return df, fake_data, metric_results
 
 if __name__ == '__main__':   
