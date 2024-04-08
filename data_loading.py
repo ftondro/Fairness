@@ -4,6 +4,8 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import QuantileTransformer
 from collections import OrderedDict
+import warnings
+warnings.filterwarnings("ignore")
 
 def sine_data_generation (no, seq_len, dim):
   # Initialize the output
@@ -76,11 +78,11 @@ def get_ohe_data_fair(df, S_under, Y_desire, S, Y):
 
 def real_data_loading (args):
   assert args.df_name in ['stock','energy', 'vital']
-  if args.df_name == 'stock':
+  if args.df_name  == 'stock':
     df = pd.read_csv('data/stock_data.csv')
-  elif args.df_name == 'energy':
+  elif args.df_name  == 'energy':
     df = pd.read_csv('data/energy_data.csv')
-  elif args.df_name == 'vital':
+  elif args.df_name  == 'vital':
     df = pd.read_csv('data/vital_signs_data.csv')
   if args.command == 'with_fairness':
     S = args.S
